@@ -9,4 +9,4 @@ Contains code used for calling barcode bits and transcriptome alignments (to be 
 Contains code used for transcriptomic and gene expression analyses (DEG, GSEA) (Fig. 4-5, S4, S6), stacked bar plot for empty droplet analysis (Fig. 7), and cell type calling for connectivity analysis (Fig. 8, S7, S8). 
 
 ## connectivity_jupyter_analyses.ipynb
-Contains code used for connectivity analysis (Fig. 8, S7, S8).
+Contains code used for calculating Shannon entropy and connectivity analysis (Fig. 1,2, 8, S7, S8).
