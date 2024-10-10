@@ -1,0 +1,930 @@
+```{r setup}
+#setup
+library(devtools)
+library(BiocManager)
+library(DESeq2)
+library(Matrix)
+library(Seurat)
+library(SeuratObject)
+library(dplyr)
+library(patchwork)
+library(rhdf5)
+library(ggpubr)
+library(tidyverse)
+library(ggplot2)
+library(hdf5r)
+library(EnhancedVolcano)
+library(dittoSeq)
+library(sctransform)
+library(glmGamPoi)
+library(cowplot)
+library(harmony)
+library(DoubletFinder)
+library(clusterProfiler)
+library(dittoSeq)
+```
+
+```{r Data setup}
+s1<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s1/custom_star/trimmed_Solo.out/Gene/filtered/')
+s2<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s2/custom_star/trimmed_Solo.out/Gene/filtered/')
+s3<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s3/custom_star/trimmed_Solo.out/Gene/filtered/')
+s4<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s4/custom_star/trimmed_Solo.out/Gene/filtered/')
+s5<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s5/custom_star/trimmed_Solo.out/Gene/filtered/')
+
+#load in cvs sets
+c1<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw19.1/cdna_cell/barcoded_fastqs/trimmed_Solo.out/Gene/filtered')
+c2<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw21/cdna_cell/barcoded_fastqs/trimmed_Solo.out/Gene/filtered')
+
+#load in uninfected
+u1<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/uninfected/cell/barcoded_fastqs/trimmed_Solo.out/Gene/filtered/')
+
+#load in nuc
+n1<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw19.1/cdna_nuc/barcoded_fastqs/trimmed_Solo.out/Gene/filtered')
+n2<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw21/cdna_nuc/barcoded_fastqs/trimmed_Solo.out/Gene/filtered')
+
+
+#Get percent.mito for all datasets aligned via pipseeker:
+s1_mito<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s1/filtered_matrix/sensitivity_5/')
+s1_mito<-CreateSeuratObject(counts = s1_mito)
+s1_mito[["percent.mt"]] <- PercentageFeatureSet(s1_mito, pattern = "^MT-")
+s2_mito<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s2/filtered_matrix/sensitivity_5/')
+s2_mito<-CreateSeuratObject(counts = s2_mito)
+s2_mito[["percent.mt"]] <- PercentageFeatureSet(s2_mito, pattern = "^MT-")
+s3_mito<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s3/filtered_matrix/sensitivity_5/')
+s3_mito<-CreateSeuratObject(counts = s3_mito)
+s3_mito[["percent.mt"]] <- PercentageFeatureSet(s3_mito, pattern = "^MT-")
+s4_mito<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s4/filtered_matrix/sensitivity_5/')
+s4_mito<-CreateSeuratObject(counts = s4_mito)
+s4_mito[["percent.mt"]] <- PercentageFeatureSet(s4_mito, pattern = "^MT-")
+s5_mito<-Read10X('/Users/maddieurbanek/Desktop/febmarch/s5/filtered_matrix/sensitivity_5/')
+s5_mito<-CreateSeuratObject(counts = s5_mito)
+s5_mito[["percent.mt"]] <- PercentageFeatureSet(s5_mito, pattern = "^MT-")
+uninfected_mito<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/uninfected/cell/filtered_matrix/sensitivity_5/')
+uninfected_mito<-CreateSeuratObject(counts = uninfected_mito)
+uninfected_mito[["percent.mt"]] <- PercentageFeatureSet(uninfected_mito, pattern = "^MT-")
+c1_mito<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw19.1/cdna_cell/filtered_matrix/sensitivity_5')
+c1_mito<-CreateSeuratObject(counts = c1_mito)
+c1_mito[["percent.mt"]] <- PercentageFeatureSet(c1_mito, pattern = "^MT-")
+c2_mito<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw21/cdna_cell/filtered_matrix/sensitivity_5')
+c2_mito<-CreateSeuratObject(counts = c2_mito)
+c2_mito[["percent.mt"]] <- PercentageFeatureSet(c2_mito, pattern = "^MT-")
+n1_mito<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw19.1/cdna_nuc/filtered_matrix/sensitivity_5')
+n1_mito<-CreateSeuratObject(counts = n1_mito)
+n1_mito[["percent.mt"]] <- PercentageFeatureSet(n1_mito, pattern = "^MT-")
+n2_mito<-Read10X('/Users/maddieurbanek/Desktop/apr2024_nuc_vs_single/gw21/cdna_nuc/filtered_matrix/sensitivity_5')
+n2_mito<-CreateSeuratObject(counts = n2_mito)
+n2_mito[["percent.mt"]] <- PercentageFeatureSet(n2_mito, pattern = "^MT-")
+
+s1<-CreateSeuratObject(counts = s1)
+s1[["percent.mt"]] <- s1_mito$percent.mt
+s2<-CreateSeuratObject(counts = s2)
+s2[["percent.mt"]] <- s2_mito$percent.mt
+s3<-CreateSeuratObject(counts = s3)
+s3[["percent.mt"]] <- s3_mito$percent.mt
+s4<-CreateSeuratObject(counts = s4)
+s4[["percent.mt"]] <- s4_mito$percent.mt
+s5<-CreateSeuratObject(counts = s5)
+s5[["percent.mt"]] <- s5_mito$percent.mt
+c1<-CreateSeuratObject(counts = c1)
+c1[["percent.mt"]] <- c1_mito$percent.mt
+c2<-CreateSeuratObject(counts = c2)
+c2[["percent.mt"]] <- c2_mito$percent.mt
+n1<-CreateSeuratObject(counts = n1)
+n1[["percent.mt"]] <- n1_mito$percent.mt
+n2<-CreateSeuratObject(counts = n2)
+n2[["percent.mt"]] <- n2_mito$percent.mt
+u1<-CreateSeuratObject(counts = u1)
+u1[["percent.mt"]] <- uninfected_mito$percent.mt
+rm(s1_mito)
+rm(s2_mito)
+rm(s3_mito)
+rm(s4_mito)
+rm(s5_mito)
+rm(n1_mito)
+rm(n2_mito)
+rm(c2_mito)
+rm(c1_mito)
+rm(u1_mito)
+s1 <- subset(s1, subset = percent.mt != "NA")
+s2 <- subset(s2, subset = percent.mt != "NA")
+s3 <- subset(s3, subset = percent.mt != "NA")
+s4 <- subset(s4, subset = percent.mt != "NA")
+s5 <- subset(s5, subset = percent.mt != "NA")
+c1 <- subset(c1, subset = percent.mt != "NA")
+c2 <- subset(c2, subset = percent.mt != "NA")
+n1 <- subset(n1, subset = percent.mt != "NA")
+n2 <- subset(n2, subset = percent.mt != "NA")
+u1 <- subset(u1, subset = percent.mt != "NA")
+
+s1[["datasetid"]] <- "s1"
+s2[["datasetid"]] <- "s2"
+s3[["datasetid"]] <- "s3"
+s4[["datasetid"]] <- "s4"
+s5[["datasetid"]] <- "s5"
+c1[["datasetid"]] <- "c1"
+c2[["datasetid"]] <- "c2"
+n1[["datasetid"]] <- "n1"
+n2[["datasetid"]] <- "n2"
+u1[["datasetid"]] <- "u1"
+
+s1[["virus"]] <- "sadb19"
+s2[["virus"]] <- "sadb19"
+s3[["virus"]] <- "sadb19"
+s4[["virus"]] <- "sadb19"
+s5[["virus"]] <- "sadb19"
+c1[["virus"]] <- "cvs"
+c2[["virus"]] <- "cvs"
+n1[["virus"]] <- "cvs"
+n2[["virus"]] <- "cvs"
+u1[["virus"]] <- "uninfected"
+
+s1[["modality"]] <- "cell"
+s2[["modality"]] <- "cell"
+s3[["modality"]] <- "cell"
+s4[["modality"]] <- "cell"
+s5[["modality"]] <- "cell"
+c1[["modality"]] <- "cell"
+c2[["modality"]] <- "cell"
+n1[["modality"]] <- "nuc"
+n2[["modality"]] <- "nuc"
+u1[["modality"]] <- "cell"
+
+s1[["age"]] <- "gw21"
+s2[["age"]] <- "gw16"
+s3[["age"]] <- "gw22"
+s4[["age"]] <- "gw20"
+s5[["age"]] <- "gw20"
+c1[["age"]] <- "gw19"
+c2[["age"]] <- "gw21"
+n1[["age"]] <- "gw19"
+n2[["age"]] <- "gw21"
+u1[["age"]] <- "gw16-21"
+
+s1 <- RenameCells(s1, 's1')
+s1[["cellbarcode"]] <- s1@assays$RNA@cells[[1]]
+s2 <- RenameCells(s2, 's2')
+s2[["cellbarcode"]] <- s2@assays$RNA@cells[[1]]
+s3 <- RenameCells(s3, 's3')
+s3[["cellbarcode"]] <- s3@assays$RNA@cells[[1]]
+s4 <- RenameCells(s4, 's4')
+s4[["cellbarcode"]] <- s4@assays$RNA@cells[[1]]
+s5 <- RenameCells(s5, 's5')
+s5[["cellbarcode"]] <- s5@assays$RNA@cells[[1]]
+c1 <- RenameCells(c1, 'c1')
+c1[["cellbarcode"]] <- c1@assays$RNA@cells[[1]]
+c2 <- RenameCells(c2, 'c2')
+c2[["cellbarcode"]] <- c2@assays$RNA@cells[[1]]
+n1 <- RenameCells(n1, 'n1')
+n1[["cellbarcode"]] <- n1@assays$RNA@cells[[1]]
+n2 <- RenameCells(n2, 'n2')
+n2[["cellbarcode"]] <- n2@assays$RNA@cells[[1]]
+u1 <- RenameCells(u1, 'u1')
+u1[["cellbarcode"]] <- u1@assays$RNA@cells[[1]]
+
+all<-merge(x = s1, y = c(s2,s3,s4,s5,c1,c2,n1,n2,u1))
+
+n1 <- subset(n1, subset = nFeature_RNA > 300 & nCount_RNA > 300 & percent.mt < 5)
+n2 <- subset(n2, subset = nFeature_RNA > 300 & nCount_RNA > 300 & percent.mt < 5)
+c1 <- subset(c1, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+c2 <- subset(c2, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+s1 <- subset(s1, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+s2 <- subset(s2, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+s3 <- subset(s3, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+s4 <- subset(s4, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+s5 <- subset(s5, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+u1 <- subset(u1, subset = nFeature_RNA > 1000 & nCount_RNA > 1250 & percent.mt < 5)
+
+all_qc<-merge(x = s1, y = c(s2,s3,s4,s5,c1,c2,n1,n2,u1))
+
+all[['thresholded']] <- 'n'
+all_qc[['thresholded']] <- 'y'
+```
+
+
+```{r transcriptomic mapping}
+all_txn <- all_qc %>%
+    NormalizeData() %>%
+    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
+    ScaleData() %>%
+    SCTransform(vars.to.regress = c("percent.mt"))
+all_txn <- RunPCA(all_txn, assay = "SCT", npcs = 50)
+txn_harmony <- RunHarmony(all_txn, 
+				group.by.vars = "datasetid", 
+				reduction = "pca", assay.use = "SCT", reduction.save = "harmony")
+txn_harmony<- RunUMAP(txn_harmony, reduction = "harmony", assay = "SCT", dims = 1:40)
+txn_harmony <- FindNeighbors(object = txn_harmony, reduction = "harmony")
+txn_harmony <- FindClusters(txn_harmony, resolution = 1.0)
+saveRDS(txn_harmony,'/Users/maddieurbanek/Desktop/rabies_project/data/txn_harmony.rds')
+
+image=DimPlot(txn_harmony, label=TRUE)+NoLegend()
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/original_clusters.svg',plot = image,width=8,height=8,units='in')
+
+image=DimPlot(txn_harmony, group.by='age')+NoLegend()
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/age_clusters.svg',plot = image,width=8,height=8,units='in')
+
+image=DimPlot(txn_harmony, group.by='modality')+NoLegend()
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/modality_clusters.svg',plot = image,width=8,height=8,units='in')
+
+image=DimPlot(txn_harmony, group.by='datasetid')+NoLegend()
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/dataset_clusters.svg',plot = image,width=8,height=8,units='in')
+
+#feature plots
+image=FeaturePlot_scCustom(txn_harmony, features = "HES1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/hes1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "GLI3",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/gli3.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "GFAP", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/gfap.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "AQP4", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/aqp4.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "PDGFRA",na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/pdgfra.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "OLIG1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/olig1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "OLIG2", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/olig2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "MBP", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/mbp.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "MKI67", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/mki67.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "TOP2A", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/top2a.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "CENPF", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/cenpf.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "EOMES",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/eomes.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "DLX2", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/dlx2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "ST18", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/st18.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "NR4A2", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/nr4a2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "LPAR1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/lpar1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "CRYM", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/crym.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "TLE4",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/tle4.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "NRXN3", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/nrxn3.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SATB2",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/satb2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SATB2-AS1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/satb2-as1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "BHLHE22", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/bhlhe22.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "CUX1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/cux1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "CUX2",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/cux2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "NEUROD2", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/neurod2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "NEUROD6", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/neurod6.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SLC17A6",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/slc17a6.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SLC17A7",na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/slc17a7.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "AUTS2", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/auts2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "TBR1",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/tbr1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "DLX5",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/dlx5.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "GAD1",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/gad1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "LHX6",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/lhx6.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SCGN",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/scgn.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SP8",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/sp8.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "PAX6",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/pax6.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "FOXP2",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/foxp2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SLC32A1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/slc32a1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "AIF1",  na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/aif1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "FN1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/fn1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "CLDN5", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/cldn5.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "KCNJ8", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/kcnj8.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "RELN", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/reln.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "FEZF2", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/fezf2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "HPCAL1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/hpcal1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "NPY", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/npy.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "FEZF2", order=TRUE, na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/fezf2.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "RORB", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/fig6/supp_features/rorb.svg",plot=image,height=8,width=8,units='in')
+
+image=FeaturePlot_scCustom(txn_harmony, features = "SPARCL1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/feature_plots/sparcl1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "FOXP1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/feature_plots/foxp1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "SLC1A3", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/feature_plots/slc1a3.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "TLE4", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/feature_plots/tle4.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "INSM1", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/feature_plots/insm1.svg",plot=image,height=8,width=8,units='in')
+image=FeaturePlot_scCustom(txn_harmony, features = "PRSS12", na_color = "lightgray")+NoLegend()
+ggsave("/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/feature_plots/prss12.svg",plot=image,height=8,width=8,units='in')
+
+saveRDS(txn_harmony,'/Users/maddieurbanek/Desktop/rabies_project/data/txn_harmony.rds')
+
+#annotate
+txn_harmony_idents <- c('L2/3','L2/3','L2/3','L4','RG','L2/3','In','Progenitors','L2/3','Astrocytes','L5/6/SP','L2/3','L2/3','OPCs','RG','RG','L2/3','In','Astrocytes','L2/3','L2/3')
+names(txn_harmony_idents) <- levels(txn_harmony)
+annotated_txn_harmony <- RenameIdents(object = txn_harmony, txn_harmony_idents)
+annotated_txn_harmony[['celltype']]<-annotated_txn_harmony@active.ident
+annotated_txn_harmony[['umap_1']]<-annotated_txn_harmony@reductions$umap@cell.embeddings[,1]
+annotated_txn_harmony[['umap_2']]<-annotated_txn_harmony@reductions$umap@cell.embeddings[,2]
+
+image=DimPlot(annotated_txn_harmony, cols=c('#fdae61','#d53e4f','#abdda4','#5e4fa2','#3288bd','#EECC66','#882255','#88CCEE'))+NoLegend()
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/annotated_clusters.svg',plot = image,width=8,height=8,units='in')
+
+#contributions to clusters by age:
+no_uninfected=subset(annotated_txn_harmony, subset=datasetid != 'u1')
+image=dittoBarPlot(no_uninfected, var='age',group.by='celltype')
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/age_bar.svg',plot = image,width=8,height=8,units='in')
+image=dittoBarPlot(no_uninfected, var='celltype',group.by='age',var.labels.reorder=c(8,6,1,7,2,3,4,5))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/celltype_age_bar.svg',plot = image,width=8,height=8,units='in')
+
+#Dot plot
+# reorder clusters
+annotated_txn_harmony@active.ident <- factor(annotated_txn_harmony@active.ident, levels=c('L5/6/SP','L4','L2/3','In','Progenitors','Astrocytes','OPCs','RG'))
+plot=DotPlot_scCustom(annotated_txn_harmony, features=c('HES1','SLC1A3','PAX6','GFAP','AQP4','SPARCL1','OLIG1','OLIG2','MBP','AIF1','MKI67','CENPF','TOP2A','EOMES','DLX2','GAD1','SLC32A1','DLX5','LHX6','SCGN','SATB2','NEUROD2','NEUROD6','BHLHE22','TBR1','HPCAL1','CUX2','PRSS12','INSM1','RORB','FOXP1','TLE4','CRYM','NR4A2','ST18','FEZF2'))
+image=plot + theme(axis.text.x = element_text(angle = 45, hjust=1))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/dot_plot.svg',plot = image,width=10,height=3,units='in')
+
+dim_plot <- DimPlot(annotated_txn_harmony,group.by = 'datasetid',pt.size=0.05,cols=c('black','black','black','black','black','black','black','black','black','#b0afa2'))+NoLegend() 
+dim_plot$data$datasetid <- factor(x = dim_plot$data$datasetid, levels = c('u1','c1','c2','n1','n2','s1','s2','s3','s4','s5'))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/infected_vs_non.png',plot = dim_plot,width=8,height=8,units='in')
+```
+
+
+```{r strain}
+#all is pre-qc thresholding!
+#all_qc is post-qc thresholding!
+
+#subset down to sad, cvs, and uninfected whole cell
+strains=c('s1','s2','s3','s4','s5','c1','c2','u1')
+pre_strain <- subset(all, subset = datasetid %in% strains)
+post_strain <- subset(all_qc, subset = datasetid %in% strains)
+#Total cells in datasets pre-thresholding:
+#s1: 1644
+#s2: 3432
+#s3: 1484
+#s4: 2114
+#s5: 1493
+#c1: 4303
+#c2: 12409
+#u1: 8632
+
+#Total cells in datasets post-thresholding:
+#s1:400
+#s2:1867 
+#s3:1137 
+#s4:1412 
+#s5:1026 
+#c1:1609
+#c2:8587
+#u1:7446
+
+strain_all=merge(x=post_strain,y=pre_strain)
+image=VlnPlot(strain_all,group.by=c('virus'),split.by='thresholded',features=c('nCount_RNA'),cols= c('#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/count_vln.svg',plot = image,width=8,height=8,units='in')
+image=VlnPlot(strain_all,group.by=c('virus'),split.by='thresholded',features=c('nFeature_RNA'),cols= c('#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/feature_vln.svg',plot = image,width=8,height=8,units='in')
+image=VlnPlot(strain_all,group.by=c('virus'),split.by='thresholded',features=c('percent.mt'),cols= c('#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/mito_vln.svg',plot = image,width=8,height=8,units='in')
+
+annotated_strains[['logged_counts']]=log10(annotated_strains@meta.data$nCount_RNA)
+annotated_strains[['logged_features']]=log10(annotated_strains@meta.data$nFeature_RNA)
+
+image=VlnPlot(annotated_strains,group.by=c('virus'),features=c('logged_counts'),cols= c("#5b1a18","#fd6467",'#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/counts_violin.svg',plot = image,width=8,height=8,units='in')
+image=VlnPlot(annotated_strains,group.by=c('virus'),features=c('logged_features'),cols= c("#5b1a18","#fd6467",'#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/features_violin.svg',plot = image,width=8,height=8,units='in')
+image=VlnPlot(annotated_strains,group.by=c('virus'),features=c('percent.mt'),cols= c("#5b1a18","#fd6467",'#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/mito_violin.svg',plot = image,width=8,height=8,units='in')
+
+strains=c('s1','s2','s3','s4','s5','c1','c2','u1')
+annotated_strains <- subset(annotated_txn_harmony, subset = datasetid %in% strains)
+image=DimPlot(annotated_strains, group.by='virus', cols=c("#5b1a18","#fd6467","#f1bb7b"),order=TRUE,alpha=0.3)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/clusters.svg',plot = image,width=8,height=8,units='in')
+
+image=dittoBarPlot(annotated_strains, var='virus',group.by='celltype')
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/age_bar.svg',plot = image,width=8,height=8,units='in')
+
+write.csv(annotated_strains@meta.data, '/Users/maddieurbanek/Desktop/rabies_project/data/strains_metadata.csv')
+
+#DEG testing across strains
+#Regress out ribo for DEG analysis
+reanalyzed_strains<-merge(x=s1, y=c(s2,s3,s4,s5,c1,c2,u1))
+reanalyzed_strains[["percent.ribo"]] <- PercentageFeatureSet(reanalyzed_strains, pattern = "^RP-")
+reanalyzed_strains<-NormalizeData(reanalyzed_strains)
+reanalyzed_strains<-FindVariableFeatures(reanalyzed_strains, selection.method = "vst", nfeatures = 2000)
+reanalyzed_strains<-ScaleData(reanalyzed_strains)
+reanalyzed_strains<-SCTransform(reanalyzed_strains,vars.to.regress = c("percent.mt",'percent.ribo'))
+reanalyzed_strains <- RunPCA(reanalyzed_strains, assay = "SCT", npcs = 50)
+reanalyzed_strains<- RunUMAP(reanalyzed_strains, reduction = "pca", assay = "SCT", dims = 1:40)
+reanalyzed_strains <- FindNeighbors(object = reanalyzed_strains, reduction = "pca")
+reanalyzed_strains <- FindClusters(reanalyzed_strains, resolution = 1.0)
+reanalyzed_strains[['assigned_celltype']]=annotated_strains$celltype
+reanalyzed_strains<-SetIdent(reanalyzed_strains,value=reanalyzed_strains$assigned_celltype)
+image=DimPlot(reanalyzed_strains,cols=c('#fdae61','#d53e4f','#abdda4','#5e4fa2','#3288bd','#EECC66','#882255','#88CCEE'))+NoLegend()
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/annotated_clusters.svg',plot = image,width=8,height=8,units='in')
+
+#All cells
+DefaultAssay(reanalyzed_strains)<-'RNA'
+reanalyzed_strains<-SetIdent(reanalyzed_strains,value=reanalyzed_strains$virus)
+reanalyzed_strains<-JoinLayers(reanalyzed_strains)
+all_s_v_u = FindMarkers(reanalyzed_strains, ident.1 = 'sadb19', ident.2= 'uninfected', verbose = T)
+all_c_v_u = FindMarkers(reanalyzed_strains, ident.1 = 'cvs', ident.2= 'uninfected', verbose = T)
+all_c_v_s = FindMarkers(reanalyzed_strains, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T)
+
+all_c_v_s_fc<-all_c_v_s$avg_log2FC
+names(all_c_v_s_fc)<-rownames(all_c_v_s)
+all_c_v_s_fc<-na.omit(all_c_v_s_fc)
+all_c_v_s_fc=sort(all_c_v_s_fc,decreasing=TRUE)
+em2 <- GSEA(all_c_v_s_fc, TERM2GENE = m_df)
+head(em2)  
+dotplot(em2, showCategory=10, split=".sign") + facet_grid(.~.sign)
+
+degs=read.csv('/Users/maddieurbanek/Desktop/c_v_s.csv')
+rownames(degs)<-degs$X
+new_df <- subset(degs, abs(avg_log2FC)>2) 
+new_df_fc<-degs$avg_log2FC
+names(new_df_fc)<-rownames(degs)
+new_df_fc<-na.omit(new_df_fc)
+new_df_fc=sort(new_df_fc,decreasing=TRUE)
+em2 <- GSEA(new_df_fc, TERM2GENE = m_df)
+head(em2)  
+dotplot(em2, showCategory=10, split=".sign") + facet_grid(.~.sign)
+
+#GSEA w/ clusterProfiler
+library(msigdbr)
+m_df<-msigdbr(species = "Homo sapiens", category = 'H') %>%
+  dplyr::select(gs_name, gene_symbol)
+organism='org.Hs.eg.db'
+
+degs<-read.csv('/Users/maddieurbanek/Desktop/c_v_s.csv')
+rownames(degs)<-degs$X
+new_df_fc<-degs$avg_log2FC
+names(new_df_fc)<-rownames(degs)
+new_df_fc<-na.omit(new_df_fc)
+new_df_fc=sort(new_df_fc,decreasing=TRUE)
+
+degs_gsea <- gseGO(geneList=new_df_fc, 
+             ont ="BP", 
+             keyType = "SYMBOL", 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = organism, 
+             pAdjustMethod = "fdr")
+image=dotplot(degs_gsea, showCategory=10, split=".sign") + facet_grid(.~.sign)
+#ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/c_v_s_gsea.svg',plot = image,width=6,height=4,units='in')
+
+
+#Volcano plot
+image=EnhancedVolcano(degs,
+                lab = rownames(degs),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/c_v_s_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+image=EnhancedVolcano(deg,
+                lab = deg$X,
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                pCutoff = 10e-2,
+                FCcutoff = 1,
+                cutoffLineType = 'twodash',
+                cutoffLineWidth = 0.8,
+                pointSize = 2.0,
+                labSize = 12.0,
+                colAlpha = 1
+                ,xlim = c(-13,17.5) #whatever seems appropriate
+)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/full_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+library(UCell)
+inflammatory_modules <- list()
+inflammatory_modules$immune_response <- degs_gsea@geneSets$'GO:0006955'
+inflammatory_modules$inflammatory_response <- degs_gsea@geneSets$'GO:0006954'
+inflammatory_modules$defense_response <- degs_gsea@geneSets$'GO:0006952'   
+inflammatory_modules$positive_regulation_of_immune_system_process <- degs_gsea@geneSets$'GO:0002684'
+inflammatory_modules$glial_cell_activation <- degs_gsea@geneSets$'GO:0061900'   
+inflammatory_modules$degs<- c('CCL4','CCL3')
+
+strains=c('s1','s2','s3','s4','s5','c1','c2')
+virus_only <- subset(annotated_strains, subset = datasetid %in% strains)
+virus_only <- AddModuleScore_UCell(virus_only, features = inflammatory_modules,maxRank=2024)
+
+signature.names <- paste0(names(inflammatory_modules), "_UCell")
+
+image=VlnPlot(virus_only, features = "immune_response_UCell", group.by = 'virus', cols= c("#5b1a18","#fd6467"))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/immune_response.svg',plot = image,width=8,height=8,units='in')
+
+image=VlnPlot(virus_only, features = "defense_response_UCell", group.by = 'virus', cols= c("#5b1a18","#fd6467"))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/defense_response.svg',plot = image,width=8,height=8,units='in')
+
+image=VlnPlot(virus_only, features = "glial_cell_activation_UCell", group.by = 'virus', cols= c("#5b1a18","#fd6467"))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/glial_activation.svg',plot = image,width=8,height=8,units='in')
+
+image=VlnPlot(virus_only, features = "inflammatory_response_UCell", group.by = 'virus', cols= c("#5b1a18","#fd6467"))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/inflammatory_response.svg',plot = image,width=8,height=8,units='in')
+
+image=VlnPlot(virus_only, features = "positive_regulation_of_immune_system_process_UCell", group.by = 'virus', cols= c("#5b1a18","#fd6467"))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/positive_reg_immune.svg',plot = image,width=8,height=8,units='in')
+
+min(virus_only$immune_response_UCell)
+max(virus_only$immune_response_UCell)
+image=FeaturePlot(virus_only, reduction = "umap", features = 'immune_response_UCell', split.by='virus', order = T, keep.scale='all') & scale_colour_gradientn(colors=c('skyblue','white','red'),limits=c(0.514779,0.5708055)) & theme(legend.position = "right")
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/fp_immune_response.svg',plot = image,width=16,height=8,units='in') 
+
+min(virus_only$inflammatory_response_UCell)
+max(virus_only$inflammatory_response_UCell)
+image=FeaturePlot(virus_only, reduction = "umap", features = 'inflammatory_response_UCell', split.by='virus', order = T, keep.scale='all') & scale_colour_gradientn(colors=c('skyblue','white','red'),limits=c(0.2315234,0.3129598)) & theme(legend.position = "right")
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/fp_inflammatory_response.svg',plot = image,width=16,height=8,units='in') 
+
+min(virus_only$defense_response_UCell)
+max(virus_only$defense_response_UCell)
+image=FeaturePlot(virus_only, reduction = "umap", features = 'defense_response_UCell', split.by='virus', order = T, keep.scale='all') & scale_colour_gradientn(colors=c('skyblue','white','red'),limits=c(0.473018,0.5429469)) & theme(legend.position = "right")
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/fp_defense_response.svg',plot = image,width=16,height=8,units='in') 
+
+min(virus_only$glial_cell_activation_UCell)
+max(virus_only$glial_cell_activation_UCell)
+image=FeaturePlot(virus_only, reduction = "umap", features = 'glial_cell_activation_UCell', split.by='virus', order = T, keep.scale='all') & scale_colour_gradientn(colors=c('skyblue','white','red'),limits=c(0,0.2141668)) & theme(legend.position = "right")
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/ucell/fp_glial_response.svg',plot = image,width=16,height=8,units='in') 
+
+strains=c('s1','s2','s3','s4','s5')
+sad_only <- subset(virus_only, subset = datasetid %in% strains)
+sad_dist<- sad_only$inflammatory_response_UCell
+strains=c('c1','c2')
+cvs_only <- subset(virus_only, subset = datasetid %in% strains)
+cvs_dist<- cvs_only$inflammatory_response_UCell
+wilcox.test(sad_dist, cvs_dist, alternative = "two.sided")
+```
+
+```{r cell type gsea}
+#currently set to annotate inflammatory genes on Volcano plots. To swap out for all DEGs, use:
+image=EnhancedVolcano(deg,
+                lab = deg$X,
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                pCutoff = 10e-2,
+                FCcutoff = 1,
+                cutoffLineType = 'twodash',
+                cutoffLineWidth = 0.8,
+                pointSize = 2.0,
+                labSize = 12.0,
+                colAlpha = 1
+                ,xlim = c(-13,17.5)
+)
+#RG
+strains='RG'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+rg_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(rg_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/rg_markers.csv')
+image=EnhancedVolcano(rg_c_v_s,
+                lab = rownames(rg_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/rg_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+#GSEA w/ clusterProfiler
+library(msigdbr)
+m_df<-msigdbr(species = "Homo sapiens", category = 'H') %>%
+  dplyr::select(gs_name, gene_symbol)
+organism='org.Hs.eg.db'
+
+rownames(rg_c_v_s)<-rg_c_v_s$X
+new_df_fc<-rg_c_v_s$avg_log2FC
+names(new_df_fc)<-rownames(rg_c_v_s)
+new_df_fc<-na.omit(new_df_fc)
+new_df_fc=sort(new_df_fc,decreasing=TRUE)
+
+degs_gsea <- gseGO(geneList=new_df_fc, 
+             ont ="BP", 
+             keyType = "SYMBOL", 
+             minGSSize = 3, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = organism, 
+             pAdjustMethod = "fdr")
+image=dotplot(degs_gsea, showCategory=10, split=".sign") + facet_grid(.~.sign)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/c_v_s_gsea.svg',plot = image,width=6,height=4,units='in')
+
+
+rownames(degs)<-degs$X
+new_df <- subset(degs, abs(avg_log2FC)>2) 
+new_df_fc<-degs$avg_log2FC
+names(new_df_fc)<-rownames(degs)
+new_df_fc<-na.omit(new_df_fc)
+new_df_fc=sort(new_df_fc,decreasing=TRUE)
+em2 <- GSEA(new_df_fc, TERM2GENE = m_df)
+head(em2)  
+dotplot(em2, showCategory=10, split=".sign") + facet_grid(.~.sign)
+
+
+
+#OPCs
+strains='OPCs'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+opcs_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(opcs_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/opc_markers.csv')
+image=EnhancedVolcano(opcs_c_v_s,
+                lab = rownames(opcs_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/opc_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+#Astrocytes
+strains='Astrocytes'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+astro_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(astro_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/astro_markers.csv')
+image=EnhancedVolcano(astro_c_v_s,
+                lab = rownames(astro_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/astro_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+#Progenitors
+strains='Progenitors'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+pro_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(pro_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/pro_markers.csv')
+image=EnhancedVolcano(pro_c_v_s,
+                lab = rownames(pro_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/pro_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+#In
+strains='In'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+in_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(in_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/in_markers.csv')
+image=EnhancedVolcano(in_c_v_s,
+                lab = rownames(in_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/in_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+
+
+
+#L2/3
+strains='L2/3'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+l23_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(l23_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/l23_markers.csv')
+image=EnhancedVolcano(l23_c_v_s,
+                lab = rownames(l23_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/l23_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+
+
+
+#L4
+strains='L4'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+l4_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(l4_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/l4_markers.csv')
+image=EnhancedVolcano(l4_c_v_s,
+                lab = rownames(l4_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/l4_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+
+
+#L5/6/SP
+strains='L5/6/SP'
+virus_rg <- subset(reanalyzed_strains, subset = assigned_celltype %in% strains)
+virus_rg <- SetIdent(virus_rg, value=virus_rg$virus)
+l56sp_c_v_s <- FindMarkers(virus_rg, ident.1 = 'cvs', ident.2= 'sadb19', verbose = T,recorrect_umi = FALSE)
+write.csv(l56sp_c_v_s, '/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/l56sp_markers.csv')
+image=EnhancedVolcano(l56sp_c_v_s,
+                lab = rownames(l56sp_c_v_s),
+                selectLab = (degs_gsea@geneSets$'GO:0006955'),
+                x = 'avg_log2FC',
+                y = 'p_val_adj',
+                FCcutoff = 2,
+                pCutoff=0.05)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/gsea/celltype/l56sp_immune_volcano.svg',plot = image,width=8,height=6,units='in')
+```
+
+
+
+
+```{r cell vs nuc}
+nucs=c('c1','c2','n1','n2')
+pre_nuc <- subset(all, subset = datasetid %in% nucs)
+post_nuc <- subset(all_qc, subset = datasetid %in% nucs)
+
+nuc_all=merge(x=post_nuc,y=pre_nuc)
+image=VlnPlot(nuc_all,group.by=c('modality'),split.by='thresholded',features=c('nCount_RNA'),cols= c('#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/6_cell_nuc/count_vln.svg',plot = image,width=8,height=8,units='in')
+image=VlnPlot(nuc_all,group.by=c('modality'),split.by='thresholded',features=c('nFeature_RNA'),cols= c('#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/6_cell_nuc/feature_vln.svg',plot = image,width=8,height=8,units='in')
+image=VlnPlot(nuc_all,group.by=c('modality'),split.by='thresholded',features=c('percent.mt'),cols= c('#f1bb7b'),alpha=0.2)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/6_cell_nuc/mito_vln.svg',plot = image,width=8,height=8,units='in')
+
+annotated_nucs <- subset(annotated_txn_harmony, subset = datasetid %in% nucs)
+image=DimPlot(annotated_nucs, group.by='modality', cols=c("#7294d4","#e6a0c4"),order=TRUE,alpha=0.9)
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/6_cell_nuc/clusters.svg',plot = image,width=8,height=8,units='in')
+```
+
+```{r ephys data analysis}
+ephys<-read.csv('/Users/maddieurbanek/Desktop/rabies_project/data/ephys.csv')
+
+mean <- ephys%>% group_by(strain)%>%summarise(mean_val=mean(Resting.Membrane.potential..mV.))
+p<-ggplot(ephys, aes(x=strain, y=Resting.Membrane.potential..mV.)) + 
+  geom_dotplot(binaxis='y', stackdir='center',
+               stackratio=1.5, dotsize=0.3) + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), 
+        geom="errorbar", color="black", width=0.5) +
+  stat_summary(fun.y=mean, geom="point", color="black") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))+geom_hline(data= mean, aes(yintercept = mean_val,col=strain))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/rmp.svg',plot = p,width=4,height=4,units='in')
+
+with(ephys, shapiro.test(Resting.Membrane.potential..mV.[strain == "cvs"]))
+#p-value = 0.8403
+with(ephys, shapiro.test(Resting.Membrane.potential..mV.[strain == "sad"]))
+#p-value = 0.144
+res.ftest <- var.test(Resting.Membrane.potential..mV. ~ strain, data = ephys)
+#p-value = 0.001615
+res <- t.test(Resting.Membrane.potential..mV. ~ strain, data = ephys, var.equal = FALSE)
+#data:  Resting.Membrane.potential..mV. by strain
+#t = 0.46691, df = 47.843, p-value = 0.6427
+#alternative hypothesis: true difference in means between group cvs and group sad is not equal to 0
+#95 percent confidence interval:
+# -6.50383 10.43760
+#sample estimates:
+#mean in group cvs mean in group sad 
+#        -48.75405         -50.72094 
+
+mean <- ephys%>% group_by(strain)%>%summarise(mean_val=mean(Cell.Capacitance..pF.))
+p<-ggplot(ephys, aes(x=strain, y=Cell.Capacitance..pF.)) + 
+  geom_dotplot(binaxis='y', stackdir='center',
+               stackratio=1.5, dotsize=0.3) + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), 
+        geom="errorbar", color="black", width=0.5) +
+  stat_summary(fun.y=mean, geom="point", color="black") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))+geom_hline(data= mean, aes(yintercept = mean_val,col=strain))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/cc.svg',plot = p,width=4,height=4,units='in')
+with(ephys, shapiro.test(Cell.Capacitance..pF.[strain == "cvs"]))
+#p-value = 0.3096
+with(ephys, shapiro.test(Cell.Capacitance..pF.[strain == "sad"]))
+#p-value = 0.3665
+res.ftest <- var.test(Cell.Capacitance..pF. ~ strain, data = ephys)
+#p-value = 0.007526
+res <- t.test(Cell.Capacitance..pF. ~ strain, data = ephys, var.equal = FALSE)
+#data:  Cell.Capacitance..pF. by strain
+#t = -1.8696, df = 50.588, p-value = 0.06733
+#alternative hypothesis: true difference in means between group cvs and group sad is not equal to 0
+#95 percent confidence interval:
+# -19.2603445   0.6873833
+#sample estimates:
+#mean in group cvs mean in group sad 
+#         39.23568          48.52216 
+
+
+mean <- ephys%>% group_by(strain)%>%summarise(mean_val=mean(Input.Resistance..MΩ.))
+p<-ggplot(ephys, aes(x=strain, y=Input.Resistance..MΩ.)) + 
+  geom_dotplot(binaxis='y', stackdir='center',
+               stackratio=1.5, dotsize=0.3) + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), 
+        geom="errorbar", color="black", width=0.5) +
+  stat_summary(fun.y=mean, geom="point", color="black") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))+geom_hline(data= mean, aes(yintercept = mean_val,col=strain))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/5_sad_cvs/ir.svg',plot = p,width=4,height=4,units='in')
+with(ephys, shapiro.test(Input.Resistance..MΩ.[strain == "cvs"]))
+#p-value = 4.197e-06
+with(ephys, shapiro.test(Input.Resistance..MΩ.[strain == "sad"]))
+#p-value = 1.071e-05
+res.ftest <- var.test(Input.Resistance..MΩ. ~ strain, data = ephys)
+#p-value = 0.005465
+res <- wilcox.test(Input.Resistance..MΩ. ~ strain, data = ephys, var.equal = FALSE)
+#p-value = 0.2788
+
+
+```
+
+```{r connectivity analysis}
+write.csv(annotated_txn_harmony@meta.data,'/Users/maddieurbanek/Desktop/rabies_project/data/metadata.csv')
+
+#Assign helper vs. presynaptic:
+barcodes <- read.csv('/Users/maddieurbanek/Desktop/rabies_project/data/thresholded_barcodes.csv')
+#Subset to >2 helper counts
+barcodes <- subset(barcodes,barcodes$UMI_Count>2)
+annotated_txn_harmony$helper <- 'uninfected'
+annotated_txn_harmony$helper[annotated_txn_harmony$cellbarcode %in% barcodes$CBC] <- 'presynaptic'
+helpers <- read.csv('/Users/maddieurbanek/Desktop/rabies_project/data/thresholded_helpers.csv',sep=',')
+#Subset to >2 helper counts
+helpers <- subset(helpers,helpers$UMI_Count>2)
+annotated_txn_harmony$helper[annotated_txn_harmony$cellbarcode %in% helpers$CBC] <- 'founder'
+
+#drop NA
+rabiesid<-as.data.frame(annotated_txn_harmony@meta.data)
+#rabiesid<-subset(rabiesid, helper %in% c('founder','presynaptic'))
+#rabiesid<- rabiesid[seq(dim(rabiesid)[1],1),]
+
+#rabiesid <- rabiesid[order(rabiesid$helper, decreasing = TRUE),]
+new <- rabiesid[order(rabiesid$helper,decreasing=),]
+umap <- ggplot(new, aes(umap_1, umap_2, colour = helper)) + geom_point() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+image=umap+scale_color_manual(values=c('forestgreen',"#d781af", 'darkgrey'))
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/4_transcriptome/rabies_umap.svg',plot = image,width=8,height=8,units='in')
+
+#get proportion of uninfected cell types
+new_df <- subset(degs, abs(avg_log2FC)>2) 
+uninfected <- subset(rabiesid, uninfected$helper == "uninfected")
+table(uninfected$celltype)
+```
+
+```{r stacked bar plot for empty droplet}
+real <- c(7643/89429, 10608/26612,8357/17875, 7448/14232, 7054/12153,6315/8200, 3570/3589)
+empty<- c(50559/89429, 9698/26612, 6073/17875, 4457/14232, 3410/12153,1308/8200, 15/3589) 
+overlap<- c(31227/89429, 6306/26612, 3445/17875, 2327/14232, 1689/12153,577/8200, 4/3589)
+sample <- c("≥1", "≥2","≥3","≥4","≥5","≥10","≥100")
+lost= c(38870/38870, (10608+6306)/38870,(8357+3445)/38870,(7448+2327)/38870,(7054+1689)/38870,(6315+577)/38870,(3570+4)/38870)
+thresholding <- data.frame(real , overlap, empty, sample, lost)
+
+image= thresholding %>% pivot_longer(cols = !c(sample,lost), names_to = "status", values_to = "percentage") %>% 
+ ggplot(aes(fill = status, x = sample, y = percentage)) + 
+ geom_bar(position = "stack", stat = "identity") + geom_line(aes(x = as.numeric(sample), y = lost))+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/empty_droplet/bar_stats.svg',plot = image,width=4,height=4,units='in')
+
+image= thresholding %>% pivot_longer(cols = !c(sample,lost), names_to = "status", values_to = "percentage") %>% 
+ggplot() +
+   geom_bar(aes(x = sample, y=percentage, fill=status)) +
+   geom_line(aes(x = as.numeric(sample), y = lost))
+
+real <- c(7643/89429, 8357/17875)
+empty<- c(50559/89429, 6073/17875) 
+overlap<- c(31227/89429, 3445/17875)
+sample <- c("No Threshold", "≥2","≥3")
+thresholding <- data.frame(real , overlap, empty, sample)
+
+image= thresholding %>% pivot_longer(cols = !sample, names_to = "status", values_to = "percentage") %>% 
+ ggplot(aes(fill = status, x = sample, y = percentage)) + 
+ geom_bar(position = "stack", stat = "identity") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+geom_line(aes(x=year, y=100*penroll),stat="identity",color="red",size=2)
+
+ggsave('/Users/maddieurbanek/Desktop/rabies_project/empty_droplet/bar_umis.svg',plot = image,width=4,height=4,units='in')
+```
