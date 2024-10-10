@@ -1,6 +1,6 @@
 # Code compiled for Shin et al. 2024
 Last amended 10/10/24 by Maddie Urbanek  
-Contains code used for analyses in Shin & Urbanek et al. 2024. Code is split into separate Jupyter and R markdown files depending descriptions of which analyses are contained in which file are below: 
+Contains code used for analyses in Shin & Urbanek et al. 2024. Code is split into separate Jupyter and R markdown files depending on language used. Command line code (executed on a Mac) for aligning bits and transcriptomes is contained in the first chunk of cells in general_jupyter_analyses.ipynb. Additional descriptions of which analyses are in which files are below and annotated by figure location: 
 
 ## general_jupyter_analyses.ipynb
 Contains code used for calling barcode bits and transcriptome alignments (to be run in command line, but currently housed in jupyter notebook), barcode diversity analyses (Fig. 1-2, S1), cell type proportion analyses (Fig. 4-5, S6), electrophysiological property analyses (Fig. 5), nuclear and cellular barcode comparisons (Fig. 6), empty droplet analysis (Fig. 7), and descriptive stats for connectivity (Fig 8).
