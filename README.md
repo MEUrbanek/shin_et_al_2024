@@ -5,7 +5,7 @@ Contains code used for analyses in Shin & Urbanek et al. 2024. Code is split int
 ## general_analysis_jupyter.ipynb
 Contains code used for calling barcode bits and transcriptome alignments (to be run in command line, but currently housed in jupyter notebook), barcode diversity analyses (Fig. 1-2, S1), cell type proportion analyses (Fig. 4-5, S6), electrophysiological property analyses (Fig. 5), nuclear and cellular barcode comparisons (Fig. 6), and empty droplet analysis (Fig. 7).  
 
-## r_scripts.rmd
+## general_r_scripts.rmd
 Contains code used for transcriptomic and gene expression analyses (DEG, GSEA) (Fig. 4-5, S4, S6), stacked bar plot for empty droplet analysis (Fig. 7), and cell type calling for connectivity analysis (Fig. 8, S7, S8). 
 
 ## connectivity_analysis_jupyter.ipynb
